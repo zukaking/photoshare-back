@@ -59,8 +59,16 @@ def get_userinfo(user_id):
     else:
       return ""
 
+def get_userinfo_by_username(username):
+    res = pg.select("SELECT * FROM user_info WHERE username = %s",(username,))
+    if len(res) > 0:
+      return res[0]
+    else:
+      return ""
+    
 def get_userinfo_by_email(email):
     res = pg.select("SELECT * FROM user_info WHERE email = %s",(email,))
+    print(res)
     if len(res) > 0:
       return res[0]
     else:

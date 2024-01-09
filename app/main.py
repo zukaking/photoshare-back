@@ -74,7 +74,7 @@ class User(BaseModel):
     username: str
     email: Union[str, None] = None
     password: Union[str, None] = None
-    user_id: Union[str, None] = None
+    user_id: Union[int, None] = None
     disabled: bool | None = False
     
 class UserInDB(User):
@@ -86,7 +86,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 app = FastAPI()
 
+#frontend側のIPを書く
 origins = [
+    "http://localhost",
+    "http://localhost:80",
     "http://localhost:8080"
 ]
 
@@ -99,6 +102,7 @@ app.add_middleware(
 )
 
 def verify_password(plain_password, hashed_password):
+    print(plain_password,hashed_password)
     return pwd_context.verify(plain_password, hashed_password)
 
 
@@ -143,8 +147,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         print(f'### token = {token},  payload = {payload}')
-        username_email: str = payload.get("sub")
-        if username_email is None:
+        username: str = payload.get("sub")
+        if username is None:
             raise credentials_exception
 
     except JWTError as e:
@@ -155,7 +159,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         )
         raise credentials_exception
     
-    info = crud.get_userinfo_by_email(email=username_email)
+    info = crud.get_userinfo_by_username(username=username)
+    if info == '':
+       raise credentials_exception 
+    print("##info##")
+    print(info)
     user = UserInDB(hashed_password=info['password'],**info)
     
     if user is None:
@@ -182,7 +190,7 @@ async def read_users_file(current_user: User = Depends(get_current_active_user))
     for _info in file_infos:
         f = FileInfo(**_info)
         _infos.append(f)
-    user_file = UserFile(user_id=info['user_id'],file_infos=_infos)
+    user_file = UserFile(user_id=str(info['user_id']),file_infos=_infos)
     return user_file
 
 @app.get("/hello")
@@ -227,7 +235,8 @@ def upload_file(file_info: FileInfo, current_user: User = Depends(get_current_us
 
 @app.post("/signup")
 def signup(user: User):
-    crud.add_userinfo(user.username,user.email,user.password)
+    hash_pass = get_password_hash(user.password)
+    crud.add_userinfo(user.username,user.email,hash_pass)
     return {"status": "OK"}
 
 @app.delete("/token", response_model=Token)
