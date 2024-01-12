@@ -1,0 +1,35 @@
+version: "3.3"
+ 
+services:
+  python:
+    container_name: uvicorn
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    
+    tty: true
+    volumes: 
+      - ./app:/app
+    networks:
+      - photoshare
+    ports:
+      - 8000:8000
+
+  db:
+    container_name: pg
+    image: postgres
+    networks:
+      - photoshare
+    ports:
+      - 5432:5432
+    environment: 
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      #データ永続化の場合はON
+      - ./db/data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d
+
+networks:
+  photoshare:
+    name: photoshare
